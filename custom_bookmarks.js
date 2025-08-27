@@ -506,6 +506,11 @@
         window.custom_favorites = true;
         
         function renderBookmarkBadges(card_object) {
+            // FIX: Added a check to ensure the card's display element exists
+            if (!card_object || !card_object.display) {
+                return;
+            }
+
             card_object.display.find('.card-bookmark-badge').remove();
             
             var all_types = customFavorite.getTypes();
@@ -608,6 +613,8 @@
             if (event.name !== 'activity') {
                 return;
             }
+
+
 
             if (Lampa.Activity.active().component === 'bookmarks') {
                 if ($('.new-custom-type').length !== 0) {
