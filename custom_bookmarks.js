@@ -473,8 +473,7 @@
                     $(this).toggleClass('selectbox-item--checked');
 
                     setTimeout(function () {
-                        // Refresh the UI to show/hide the custom bookmark badge
-                        Lampa.Controller.reset(); // This forces a full UI refresh
+                         Lampa.Controller.reset();
                     }, 0);
 
                     favoritePageSvc.refresh(type);
@@ -495,9 +494,6 @@
                 }
             }, 10);
         };
-
-        // Removed refreshCustomFavoriteIcon as it's no longer needed (no star icon)
-        // Removed refreshBookmarkIcon as it's no longer needed (no star icon)
     }
 
     var cardFavoriteSvc = new CardFavoriteService();
@@ -508,21 +504,16 @@
         }
 
         window.custom_favorites = true;
-
-        // NEW: Function to render custom bookmark badges on posters
-        function renderCustomBookmarkBadges(card_object) {
+        
+        function renderBookmarkBadges(card_object) {
+            card_object.display.find('.card-bookmark-badge').remove();
+            
             var all_types = customFavorite.getTypes();
             all_types.forEach(function (type_name) {
                 var movies_in_type = customFavorite.getTypeList(type_name);
                 if (card_object.movie && movies_in_type.indexOf(card_object.movie.id) !== -1) {
-                    // Prevent duplicate badges
-                    if (card_object.display.find('.card-bookmark-badge[data-type="' + type_name + '"]').length === 0) {
-                        var badge = '<div class="card-bookmark-badge" data-type="' + type_name + '">' + type_name + '</div>';
-                        card_object.display.find('.card__view').append(badge);
-                    }
-                } else {
-                    // Remove badge if movie is no longer in this category
-                    card_object.display.find('.card-bookmark-badge[data-type="' + type_name + '"]').remove();
+                    var badge = '<div class="card-bookmark-badge">' + type_name + '</div>';
+                    card_object.display.find('.card__view').append(badge);
                 }
             });
         }
@@ -532,23 +523,14 @@
                 if (event.type !== 'build') {
                     return;
                 }
-
-                // This section was for the star icon, now we update the custom badge directly
-                var originalFavorite = event.object.favorite;
-                event.object.favorite = function () {
-                    originalFavorite.apply(this, arguments);
-                    // Instead of star icon, ensure custom badges are rendered
-                    renderCustomBookmarkBadges(event.object);
-                }
+                
+                renderBookmarkBadges(event.object);
 
                 var originalOnMenu = event.object.onMenu;
                 event.object.onMenu = function () {
                     originalOnMenu.apply(this, arguments);
                     cardFavoriteSvc.extendContextMenu(event.object);
                 }
-                
-                // Ensure badges are rendered when card is built initially
-                renderCustomBookmarkBadges(event.object);
             });
         });
 
@@ -582,8 +564,6 @@
                 }
 
                 eventQueue = [];
-
-                // No longer need to refresh star icon, relying on badge logic
                 isProcessing = false;
 
                 if (eventQueue.length > 0) {
@@ -606,41 +586,17 @@
                 ru: 'Изменить имя'
             }
         });
-        
-        // Removed custom-fav-icon template as we no longer use the star icon.
 
         $('<style>').prop('type', 'text/css').html(
-            // Updated style for the new custom bookmark badge
-            '.card-bookmark-badge { position: absolute; bottom: 10px; left: 10px; background-color: rgba(255, 165, 0, 0.9); color: white; padding: 3px 8px; border-radius: 5px; font-size: 12px; font-weight: bold; z-index: 2; border: 1px solid rgba(255, 165, 0, 1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: calc(100% - 20px); }' +
-            // Removed star icon styles
+            '.card-bookmark-badge { position: absolute; bottom: 1rem; left: 1rem; background-color: rgba(20, 20, 20, 0.8); color: white; padding: 0.3rem 0.6rem; border-radius: 0.4rem; font-size: 1.2rem; font-weight: 500; z-index: 2; border: 1px solid rgba(255, 255, 255, 0.1); max-width: calc(100% - 2rem); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }' +
             '.new-custom-type .register__counter { display:flex; justify-content:center; align-items:center }' +
             '.new-custom-type .register__counter img { height:2.2em; padding:0.4em; }' +
             '.register.custom-type { background-image: url("https://levende.github.io/lampa-plugins/assets/tap.svg"); background-repeat: no-repeat; background-position: 90% 90%; background-size: 20%; }'
         ).appendTo('head');
 
-        // NEW: Intercept Lampa's rendering to inject our custom badges
-        Lampa.Activity.render().forEach(function (js) {
-            var activity = js.activity;
-            var original_render = activity.render;
-
-            activity.render = function () {
-                var R = original_render.apply(this, arguments);
-
-                R.find('.card').each(function () {
-                    var card_data = $(this).data('card');
-                    if (card_data) {
-                        renderCustomBookmarkBadges(card_data);
-                    }
-                });
-
-                return R;
-            };
-        });
-
         Lampa.Listener.follow('full', function (event) {
             if (event.type == 'complite') {
                 var active = Lampa.Activity.active();
-                // No longer need refreshBookmarkIcon
                 var $btnBook = $(".button--book", active.activity.render());
                 $btnBook.on('hover:enter', function () {
                     cardFavoriteSvc.extendContextMenu({ data: active.card });
@@ -674,6 +630,7 @@
                         counter: typeCounter
                     });
                 });
+
 
                 Lampa.Activity.active().activity.toggle();
             }
