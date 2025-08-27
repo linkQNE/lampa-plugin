@@ -115,8 +115,7 @@
         this.getTypes = function () {
             return Object.keys(this.getFavorite().customTypes);
         }
-
-        // ADDED: Нова функція для отримання назв закладок для конкретної картки
+        
         this.getTypesForCard = function (card) {
             var favorite = this.getFavorite();
             var cardId = card.id;
@@ -490,7 +489,6 @@
 
                     setTimeout(function () {
                         if (object.card) {
-                            // CHANGED: Викликаємо нову функцію
                             self.updateFavoriteLabel(object);
                         } else {
                             self.refreshBookmarkIcon();
@@ -515,27 +513,19 @@
                 }
             }, 10);
         };
-
-        // REWRITTEN: Функцію повністю переписано для відображення назви закладки
+        
         this.updateFavoriteLabel = function (object) {
             var card_body = $(object.card).find('.card__body');
             if (!card_body.length) card_body = $(object.card);
             
-            // Спочатку видаляємо попередню мітку, якщо вона є
             card_body.find('.card__custom-fav-label').remove();
             
-            // Отримуємо список закладок для цієї картки
             var folderNames = customFavorite.getTypesForCard(object.data);
             
-            // Якщо картка є в якійсь закладці
             if (folderNames.length > 0) {
-                // Беремо назву першої закладки
                 var folderName = folderNames[0];
-                // Створюємо елемент мітки з шаблону
                 var label = Lampa.Template.js('custom-fav-label');
-                // Встановлюємо текст
                 label.text(folderName);
-                // Додаємо мітку на картку
                 card_body.append(label);
             }
         }
@@ -585,7 +575,6 @@
                 var originalFavorite = event.object.favorite;
                 event.object.favorite = function () {
                     originalFavorite.apply(this, arguments);
-                    // CHANGED: Викликаємо нову функцію для оновлення мітки
                     cardFavoriteSvc.updateFavoriteLabel(event.object);
                 }
 
@@ -662,23 +651,24 @@
             }
         });
         
-        // CHANGED: Замінюємо шаблон іконки-зірочки на шаблон для текстової мітки
         Lampa.Template.add('custom-fav-label', '<div class="card__custom-fav-label"></div>');
 
-        // CHANGED: Оновлюємо та додаємо стилі для нової мітки
+        // IMPROVED: Покращено стиль та виправлено анімацію
         $('<style>').prop('type', 'text/css').html(
             '.card__body { position: relative; overflow: hidden; } ' +
+            '.card:not(.card--loaded) .card__custom-fav-label { display: none; }' + // FIX: Ховаємо мітку під час анімації завантаження
             '.card__custom-fav-label {' +
                 'position: absolute;' +
                 'top: 0.5em;' +
                 'right: 0.5em;' +
-                'background-color: rgba(206, 44, 44, 0.9);' + // напівпрозорий червоний
+                'background-color: var(--color-brand);' + // IMPROVE: Використовуємо колір теми
                 'color: white;' +
                 'padding: 0.2em 0.6em;' +
                 'border-radius: 0.4em;' +
                 'font-size: 1.1em;' +
                 'font-weight: 500;' +
                 'z-index: 2;' +
+                'text-shadow: 1px 1px 2px rgba(0,0,0,0.5);' + // IMPROVE: Додано тінь для читабельності
                 'max-width: 80%;' +
                 'white-space: nowrap;' +
                 'overflow: hidden;' +
@@ -703,16 +693,9 @@
             }
         });
 
-        Lampa.Storage.listener.follow('change', function (event) {
-            if (event.name !== 'activity') {
-                return;
-            }
-
-            if (Lampa.Activity.active().component === 'bookmarks') {
-                if ($('.new-custom-type').length !== 0) {
-                    return;
-                }
-
+        // FIXED: Перенесено логіку відображення на сторінці закладок у більш надійний слухач
+        Lampa.Listener.follow('activity', function (e) {
+            if (e.type == 'ready' && e.object.component == 'bookmarks') {
                 favoritePageSvc.renderAddButton();
                 var favorite = customFavorite.getFavorite();
 
@@ -729,7 +712,6 @@
                         counter: typeCounter
                     });
                 });
-
 
                 Lampa.Activity.active().activity.toggle();
             }
